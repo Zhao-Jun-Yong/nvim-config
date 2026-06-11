@@ -1,0 +1,113 @@
+-- Vault task picker (<leader>ov) + date-insertion keymaps (<leader>td / <leader>ts)
+
+local function open_task_picker()
+  local pickers     = require("telescope.pickers")
+  local finders     = require("telescope.finders")
+  local conf        = require("telescope.config").values
+  local actions     = require("telescope.actions")
+  local action_state = require("telescope.actions.state")
+
+  local raw = vim.fn.systemlist("vault-tasks 2>/dev/null")
+  if vim.v.shell_error ~= 0 and #raw == 0 then
+    vim.notify("vault-tasks: not found or errored — is it in PATH?", vim.log.levels.ERROR)
+    return
+  end
+
+  local results     = {}
+  local must_count  = 0
+  for _, line in ipairs(raw) do
+    local parts = vim.split(line, "\t", { plain = true })
+    if #parts >= 4 then
+      local section = parts[1]
+      local file    = parts[2]
+      local lnum    = tonumber(parts[3])
+      local text    = parts[4]
+      if section == "MUST" then must_count = must_count + 1 end
+      table.insert(results, {
+        section  = section,
+        file     = file,
+        lnum     = lnum,
+        text     = text,
+        display  = (section == "MUST" and "🔥 " or "   ") .. text,
+        -- ordinal: MUST sorts before TODO alphabetically
+        ordinal  = section .. " " .. text,
+      })
+    end
+  end
+
+  local todo_count = #results - must_count
+  local title = string.format("Vault Tasks  🔥 %d urgent  · %d to do", must_count, todo_count)
+
+  pickers.new({}, {
+    prompt_title = title,
+    finder = finders.new_table({
+      results = results,
+      entry_maker = function(entry)
+        return {
+          value    = entry,
+          display  = entry.display,
+          ordinal  = entry.ordinal,
+          filename = entry.file,
+          lnum     = entry.lnum,
+        }
+      end,
+    }),
+    sorter    = conf.generic_sorter({}),
+    previewer = conf.grep_previewer({}),
+    attach_mappings = function(prompt_bufnr, _)
+      actions.select_default:replace(function()
+        actions.close(prompt_bufnr)
+        local sel = action_state.get_selected_entry()
+        if sel then
+          vim.cmd({ cmd = "edit", args = { sel.filename } })
+          vim.api.nvim_win_set_cursor(0, { sel.lnum, 0 })
+          vim.cmd("normal! zz")
+        end
+      end)
+      return true
+    end,
+  }):find()
+end
+
+local function append_date(emoji)
+  vim.ui.input(
+    { prompt = emoji .. " date (YYYY-MM-DD, Enter = today): " },
+    function(input)
+      if input == nil then return end
+      local d = (input == "") and os.date("%Y-%m-%d") or input
+      if not d:match("^%d%d%d%d%-%d%d%-%d%d$") then
+        vim.notify("Invalid date — use YYYY-MM-DD", vim.log.levels.WARN)
+        return
+      end
+      local row  = vim.api.nvim_win_get_cursor(0)[1]
+      local line = vim.api.nvim_buf_get_lines(0, row - 1, row, false)[1]
+      vim.api.nvim_buf_set_lines(0, row - 1, row, false,
+        { line .. " " .. emoji .. " " .. d })
+    end
+  )
+end
+
+return {
+  {
+    "nvim-telescope/telescope.nvim",
+    optional = true,
+    init = function()
+      -- Markdown-only: append due / scheduled date to the current task line
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern  = "markdown",
+        group    = vim.api.nvim_create_augroup("VaultTaskDates", { clear = true }),
+        callback = function(ev)
+          vim.keymap.set("n", "<leader>td", function() append_date("📅") end,
+            { buffer = ev.buf, desc = "Set due date on task" })
+          vim.keymap.set("n", "<leader>ts", function() append_date("⏳") end,
+            { buffer = ev.buf, desc = "Set scheduled date on task" })
+          vim.keymap.set("n", "<leader>ta", function() append_date("🛫") end,
+            { buffer = ev.buf, desc = "Set start date on task" })
+        end,
+      })
+    end,
+    keys = {
+      { "<leader>ot", open_task_picker, desc = "Vault tasks" },
+    },
+  },
+}
