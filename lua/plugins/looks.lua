@@ -60,6 +60,32 @@ return {
     end,
   },
 
+  -- Comment highlighting (ALERT, QUERY, NOTE, TODO, DEAD)
+  {
+    "folke/todo-comments.nvim",
+    dependencies = { "nvim-lua/plenary.nvim" },
+    event = "BufReadPost",
+    config = function()
+      require("todo-comments").setup({
+        signs = false,
+        keywords = {
+          ALERT = { icon = "󰀪", color = "#cc6666" },            -- warning triangle
+          QUERY = { icon = "󰋗", color = "#81a2be" },            -- help circle
+          NOTE  = { icon = "󰍨", color = "#b5bd68", alt = { "INFO" } },  -- note
+          TODO  = { icon = "󰄵", color = "#f0c674" },            -- checkbox
+          DEAD  = { icon = "󰩺", color = "#969896" },            -- trash / dead code
+          FIXME = { icon = "", color = "#cc6666", alt = { "FIX", "BUG" } }, -- bug
+        },
+        highlight = {
+          pattern = [[.*<(KEYWORDS)\s*:]],
+          keyword = "fg",
+          after = "fg",
+        },
+      })
+      vim.keymap.set("n", "<leader>ft", "<cmd>TodoTelescope<cr>", { desc = "Find TODOs" })
+    end,
+  },
+
   -- Startup dashboard
   {
     "nvimdev/dashboard-nvim",
