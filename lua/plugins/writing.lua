@@ -1,3 +1,5 @@
+local ai = require("ai")
+
 -- Spell + wrap for prose filetypes
 vim.api.nvim_create_autocmd("FileType", {
   pattern = { "markdown", "rmd", "quarto", "gitcommit" },
@@ -29,7 +31,7 @@ vim.api.nvim_create_autocmd("BufWritePre", {
 
 -- Markdown-specific keymaps
 vim.api.nvim_create_autocmd("FileType", {
-  pattern = "markdown",
+  pattern = { "markdown", "rmd", "quarto" },
   callback = function()
     -- Footnote: insert [^N] at cursor and jump to definition at bottom
     vim.keymap.set("n", "<leader>fn", function()
@@ -60,6 +62,50 @@ vim.api.nvim_create_autocmd("FileType", {
 
     -- Wrap @citekey under/left-of cursor into [@citekey]
     vim.keymap.set("n", "<leader>r[", "F@i[<Esc>Ea]<Esc>", { buffer = true, desc = "Bracket @citekey" })
+
+    vim.keymap.set("v", "<leader>ag", function()
+      local bufnr = vim.api.nvim_get_current_buf()
+      local ft = vim.bo[bufnr].filetype
+      vim.schedule(function()  -- defer so '< '> marks are committed
+        local s = vim.fn.line("'<")
+        local e = vim.fn.line("'>")
+        local lines = vim.api.nvim_buf_get_lines(bufnr, s - 1, e, false)
+        if s == 0 or #lines == 0 then
+          vim.notify("AI: no text selected", vim.log.levels.WARN)
+          return
+        end
+        local prompt = table.concat({
+          "Fix the following text according to these rules:",
+          "- Fix spelling, grammar, and punctuation",
+          "- Improve clarity and conciseness; break up long sentences; reduce repetition",
+          "- Prefer active voice and simple words",
+          "- Preserve original meaning, tone, style, and language (do not translate)",
+          "- Preserve all formatting (markdown, <sub>subscripts</sub>, ~subscripts~, footnotes[^1], etc.)",
+          "- Do not change technical terms, proper nouns, or specialized terminology",
+          "- Do not expand abbreviations already in abbreviated form",
+          "- Do not add new information or interpretations",
+          "- Return only the corrected text, no explanations",
+          "- If already correct, return unchanged",
+          "",
+          table.concat(lines, "\n"),
+        }, "\n")
+        vim.notify("AI: fixing grammar…", vim.log.levels.INFO)
+        vim.fn.jobstart({ "claude", "-p", prompt }, {
+          stdout_buffered = true,
+          on_stdout = function(_, data)
+            if not data then return end
+            vim.schedule(function()
+              ai.diff_split(lines, table.concat(data, "\n"), {
+                filetype = ft,
+                on_apply = function(result_lines)
+                  vim.api.nvim_buf_set_lines(bufnr, s - 1, e, false, result_lines)
+                end,
+              })
+            end)
+          end,
+        })
+      end)
+    end, { buffer = true, desc = "AI: fix grammar" })
 
     -- Pandoc export (reads bibliography/csl from YAML frontmatter automatically)
     vim.keymap.set("n", "<leader>pp", function()
