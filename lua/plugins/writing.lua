@@ -13,17 +13,17 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
--- Auto-update modified: date in YAML frontmatter on save
+-- Auto-update modified: and stamp created: (if blank) in YAML frontmatter on save
 vim.api.nvim_create_autocmd("BufWritePre", {
   pattern = "*.md",
   callback = function()
+    local today = os.date("%Y-%m-%d")
     local lines = vim.api.nvim_buf_get_lines(0, 0, 20, false)
     for idx, line in ipairs(lines) do
       if line:match("^modified:") then
-        vim.api.nvim_buf_set_lines(0, idx - 1, idx, false, {
-          "modified: " .. os.date("%Y-%m-%d"),
-        })
-        break
+        vim.api.nvim_buf_set_lines(0, idx - 1, idx, false, { "modified: " .. today })
+      elseif line:match("^created:%s*$") then
+        vim.api.nvim_buf_set_lines(0, idx - 1, idx, false, { "created: " .. today })
       end
     end
   end,
