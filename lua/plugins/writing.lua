@@ -123,28 +123,52 @@ vim.api.nvim_create_autocmd("FileType", {
       end)
     end, { buffer = true, desc = "AI: fix grammar" })
 
-    -- Pandoc export (reads bibliography/csl from YAML frontmatter automatically)
-    vim.keymap.set("n", "<leader>pp", function()
-      local file = vim.fn.expand("%:p")
-      local out  = "/Users/yangshaojun/Desktop/Workspace/000 Inbox/" .. vim.fn.expand("%:t:r") .. ".pdf"
-      vim.fn.jobstart({ "pandoc", file, "-o", out, "--pdf-engine=xelatex" }, {
-        on_exit = function(_, code)
-          if code == 0 then vim.notify("✓ PDF: " .. out)
-          else vim.notify("Pandoc failed — check :messages", vim.log.levels.ERROR) end
-        end,
-      })
-    end, { buffer = true, desc = "Export PDF (pandoc)" })
+    -- Export: rmd → rmarkdown::render (runs chunks), qmd → quarto render (runs chunks), md → pandoc
+    local inbox = "/Users/yangshaojun/Desktop/Workspace/000 Inbox/"
 
-    vim.keymap.set("n", "<leader>pw", function()
+    local function do_render(format)
       local file = vim.fn.expand("%:p")
-      local out  = "/Users/yangshaojun/Desktop/Workspace/000 Inbox/" .. vim.fn.expand("%:t:r") .. ".docx"
-      vim.fn.jobstart({ "pandoc", file, "-o", out }, {
+      local ft   = vim.bo.filetype
+      local ext  = format == "pdf" and ".pdf" or ".docx"
+      local out  = inbox .. vim.fn.expand("%:t:r") .. ext
+      vim.cmd("write")
+      vim.notify("Rendering " .. ext:sub(2):upper() .. "…")
+      local cmd
+      if ft == "quarto" then
+        local to = format == "pdf" and "pdf" or "docx"
+        cmd = { "quarto", "render", file, "--to", to, "--output-dir", inbox,
+                "--pdf-engine", "xelatex" }
+      elseif ft == "rmd" then
+        local fmt = format == "pdf"
+          and 'rmarkdown::pdf_document(latex_engine = "xelatex")'
+          or  '"word_document"'
+        cmd = { "Rscript", "-e",
+          string.format('rmarkdown::render(%q, output_format = %s, output_file = %q)', file, fmt, out) }
+      else
+        -- plain markdown: pandoc (no chunks to run)
+        cmd = format == "pdf"
+          and { "pandoc", file, "-o", out, "--pdf-engine=xelatex" }
+          or  { "pandoc", file, "-o", out }
+      end
+      local err = {}
+      vim.fn.jobstart(cmd, {
+        stderr_buffered = true,
+        on_stderr = function(_, data)
+          for _, l in ipairs(data or {}) do if l ~= "" then err[#err + 1] = l end end
+        end,
         on_exit = function(_, code)
-          if code == 0 then vim.notify("✓ DOCX: " .. out)
-          else vim.notify("Pandoc failed — check :messages", vim.log.levels.ERROR) end
+          if code == 0 then
+            vim.notify("✓ " .. ext:sub(2):upper() .. ": " .. out)
+          else
+            vim.notify("Render failed:\n" .. table.concat(err, "\n"):sub(1, 500),
+              vim.log.levels.ERROR)
+          end
         end,
       })
-    end, { buffer = true, desc = "Export DOCX (pandoc)" })
+    end
+
+    vim.keymap.set("n", "<leader>pp", function() do_render("pdf")  end, { buffer = true, desc = "Export PDF" })
+    vim.keymap.set("n", "<leader>pw", function() do_render("word") end, { buffer = true, desc = "Export DOCX" })
   end,
 })
 
