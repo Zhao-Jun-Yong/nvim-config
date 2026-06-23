@@ -1,4 +1,5 @@
--- Vault task picker (<leader>ov) + date-insertion keymaps (<leader>td / <leader>ts)
+-- Vault task picker (<leader>ot) + date-insertion keymaps (<leader>td / <leader>ts / <leader>ta)
+-- + task toggle (<leader>tc): [ ] → [x] ✅ date, [x] → [ ] strips ✅ date
 
 local function open_task_picker()
   local pickers     = require("telescope.pickers")
@@ -69,6 +70,27 @@ local function open_task_picker()
   }):find()
 end
 
+local function toggle_task()
+  local row  = vim.api.nvim_win_get_cursor(0)[1]
+  local line = vim.api.nvim_buf_get_lines(0, row - 1, row, false)[1]
+  if line:match("%- %[x%]") then
+    line = line:gsub("%- %[x%]", "- [ ]", 1)
+    line = line:gsub("%s*✅%s*%d%d%d%d%-%d%d%-%d%d", "")
+    vim.api.nvim_buf_set_lines(0, row - 1, row, false, { line })
+  elseif line:match("%- %[ %]") then
+    local completed = line:gsub("%- %[ %]", "- [x]", 1) .. " ✅ " .. os.date("%Y-%m-%d")
+    if line:match("🔁") then
+      local next_lines = vim.fn.systemlist("vault-task-recur", { line })
+      if vim.v.shell_error == 0 and #next_lines > 0 then
+        -- new recurring instance above, completed below (matches Obsidian behaviour)
+        vim.api.nvim_buf_set_lines(0, row - 1, row, false, { next_lines[1], completed })
+        return
+      end
+    end
+    vim.api.nvim_buf_set_lines(0, row - 1, row, false, { completed })
+  end
+end
+
 local function append_date(emoji)
   vim.ui.input(
     { prompt = emoji .. " date (YYYY-MM-DD, Enter = today): " },
@@ -103,6 +125,8 @@ return {
             { buffer = ev.buf, desc = "Set scheduled date on task" })
           vim.keymap.set("n", "<leader>ta", function() append_date("🛫") end,
             { buffer = ev.buf, desc = "Set start date on task" })
+          vim.keymap.set("n", "<leader>tx", toggle_task,
+            { buffer = ev.buf, desc = "Toggle task done (✅ date)" })
         end,
       })
     end,
