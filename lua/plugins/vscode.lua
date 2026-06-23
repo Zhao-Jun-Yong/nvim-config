@@ -31,4 +31,12 @@ vim.keymap.set("n", "<leader>]",
   function() vim.fn.VSCodeNotify("editor.action.marker.next") end,
   { desc = "Next diagnostic" })
 
+-- hop.nvim equivalents (hop is disabled under vscode, see plugins/editing.lua)
+vim.keymap.set("n", "<leader>hl",
+  function() vim.fn.VSCodeNotify("workbench.action.gotoLine") end,
+  { desc = "Go to line" })
+vim.keymap.set("n", "<leader>hw",
+  function() vim.fn.VSCodeNotify("actions.find") end,
+  { desc = "Find (jump to word)" })
+
 return {}

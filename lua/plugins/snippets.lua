@@ -74,7 +74,6 @@ return {
           { name = "nvim_lsp" },             -- R.nvim's r_ls (and marksman) completions
           { name = "pandoc_references" },
           { name = "luasnip", priority = 10 },
-          { name = "buffer",  keyword_length = 3 },
           { name = "path" },
         }),
       })

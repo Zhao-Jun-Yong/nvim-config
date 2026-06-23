@@ -20,6 +20,12 @@ return {
         defaults = {
           layout_strategy = "vertical",
           layout_config = { height = 0.9 },
+          mappings = {
+            i = {
+              ["<C-j>"] = "move_selection_next",
+              ["<C-k>"] = "move_selection_previous",
+            },
+          },
         },
         extensions = {
           bibtex = {

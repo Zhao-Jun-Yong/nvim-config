@@ -26,15 +26,6 @@ return {
     end,
   },
 
-  -- Inline color preview
-  {
-    "NvChad/nvim-colorizer.lua",
-    event = "BufReadPost",
-    config = function()
-      require("colorizer").setup({})
-    end,
-  },
-
   -- Modern command line and notifications UI
   {
     "folke/noice.nvim",
@@ -82,7 +73,46 @@ return {
           after = "fg",
         },
       })
-      vim.keymap.set("n", "<leader>ft", "<cmd>TodoTelescope<cr>", { desc = "Find TODOs" })
+      vim.keymap.set("n", "<leader>ft", function()
+        local Config = require("todo-comments.config")
+        local Highlight = require("todo-comments.highlight")
+        local make_entry = require("telescope.make_entry")
+        local cwd = vim.fn.getcwd() .. "/"
+        local opts = {
+          search_dirs = { vim.fn.expand("%:p") },
+          vimgrep_arguments = vim.list_extend(
+            { Config.options.search.command },
+            Config.options.search.args
+          ),
+          search = Config.search_regex(vim.tbl_keys(Config.keywords)),
+          prompt_title = "Find Todo",
+          use_regex = true,
+        }
+        local base_maker = make_entry.gen_from_vimgrep(opts)
+        opts.entry_maker = function(line)
+          local ret = base_maker(line)
+          ret.display = function(entry)
+            local fname = entry.filename:gsub("^" .. vim.pesc(cwd), "")
+            local display = string.format("%s:%s:%s ", fname, entry.lnum, entry.col)
+            local text = entry.text
+            local start, finish, kw = Highlight.match(text)
+            local hl = {}
+            if start then
+              kw = Config.keywords[kw] or kw
+              local icon = (Config.options.keywords[kw] or {}).icon or " "
+              display = icon .. " " .. display
+              table.insert(hl, { { 0, #icon + 1 }, "TodoFg" .. kw })
+              text = vim.trim(text:sub(start))
+              table.insert(hl, { { #display, #display + finish - start + 2 }, "TodoBg" .. kw })
+              table.insert(hl, { { #display + finish - start + 1, #display + finish + 1 + #text }, "TodoFg" .. kw })
+              display = display .. " " .. text
+            end
+            return display, hl
+          end
+          return ret
+        end
+        require("telescope.builtin").grep_string(opts)
+      end, { desc = "Find TODOs (current file)" })
     end,
   },
 

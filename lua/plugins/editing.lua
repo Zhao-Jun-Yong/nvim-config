@@ -48,8 +48,12 @@ return {
   },
 
   -- Jump anywhere on screen
+  -- Disabled under VSCode Neovim: hop relies on getwininfo() topline/botline,
+  -- which doesn't track VSCode's actual viewport, so jumps land on the wrong
+  -- line. See vscode.lua for VSCode-native <leader>hw/<leader>hl equivalents.
   {
     "smoka7/hop.nvim",
+    cond = not vim.g.vscode,
     keys = {
       { "<leader>hw", "<cmd>HopWord<cr>",       desc = "Hop to word" },
       { "<leader>hl", "<cmd>HopLineStart<cr>",  desc = "Hop to line" },
