@@ -9,6 +9,8 @@ if not vim.loop.fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
+vim.g.mapleader = " "
+
 -- Basic options
 vim.opt.expandtab = true
 vim.opt.shiftwidth = 2
@@ -26,8 +28,6 @@ if not vim.g.vscode then
   vim.opt.termguicolors = true  -- required for true-color themes, treesitter, colorizer
   vim.opt.conceallevel = 1      -- required for obsidian.nvim UI features
 end
-
-vim.g.mapleader = " "
 
 -- Auto-reload files changed outside Neovim (e.g. by Claude Code)
 vim.opt.autoread = true
