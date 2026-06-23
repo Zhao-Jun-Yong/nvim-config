@@ -211,6 +211,8 @@ return {
       { "<leader>on", "<cmd>ObsidianNew<cr>",         desc = "New note" },
       { "<leader>ob", "<cmd>ObsidianBacklinks<cr>",   desc = "Backlinks" },
       { "<leader>od", "<cmd>ObsidianToday<cr>",       desc = "Daily note" },
+      { "<leader>or", "<cmd>ObsidianRename<cr>",     desc = "Rename note" },
+      { "<leader>og", "<cmd>ObsidianTags<cr>",       desc = "Browse tags" },
     },
     opts = {
       workspaces = {
