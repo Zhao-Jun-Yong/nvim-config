@@ -199,6 +199,17 @@ return {
     end,
   },
 
+  -- Markdown renderer (headings, bullets, tables, code blocks)
+  {
+    "MeanderingProgrammer/render-markdown.nvim",
+    dependencies = { "nvim-tree/nvim-web-devicons" },
+    ft = { "markdown", "rmd", "quarto" },
+    opts = {
+      file_types = { "markdown", "rmd", "quarto" },
+      heading = { enabled = false },
+    },
+  },
+
   -- Obsidian vault navigation
   {
     "epwalsh/obsidian.nvim",
@@ -224,6 +235,7 @@ return {
         template = "Atlas/Extra/Template/99 Daily note template.md",
       },
       disable_frontmatter = true,
+      ui = { enable = false }, -- render-markdown.nvim handles rendering
       completion = { nvim_cmp = true, min_chars = 2 },
       follow_url_func = function(url)
         vim.fn.jobstart({ "open", url })
