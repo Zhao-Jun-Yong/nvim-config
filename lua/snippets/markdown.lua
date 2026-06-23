@@ -17,6 +17,6 @@ return {
     t({ "---", "created: " }),
     f(function() return os.date("%Y-%m-%d") end, {}),
     t({ "", "tags:", "  - " }), i(1),
-    t({ "", "---", "" }),
+    t({ "", "bibliography: /Users/yangshaojun/Desktop/Workspace/100 Area/110 Academic/111 Literature/zotero.bib", "---", "" }),
   }),
 }

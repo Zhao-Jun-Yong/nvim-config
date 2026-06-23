@@ -5,6 +5,9 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.opt_local.spell = true
     vim.opt_local.spelllang = { "en_us" }
     vim.opt_local.wrap = true
+    vim.opt_local.linebreak = true
+    vim.keymap.set("n", "j", "gj", { buffer = true, silent = true })
+    vim.keymap.set("n", "k", "gk", { buffer = true, silent = true })
   end,
 })
 
@@ -54,6 +57,9 @@ vim.api.nvim_create_autocmd("FileType", {
       vim.cmd('normal! "zd')
       vim.api.nvim_put({ "<sub>" .. vim.fn.getreg("z") .. "</sub>" }, "c", false, true)
     end, { buffer = true, desc = "Wrap subscript" })
+
+    -- Wrap @citekey under/left-of cursor into [@citekey]
+    vim.keymap.set("n", "<leader>r[", "F@i[<Esc>Ea]<Esc>", { buffer = true, desc = "Bracket @citekey" })
 
     -- Pandoc export (reads bibliography/csl from YAML frontmatter automatically)
     vim.keymap.set("n", "<leader>pp", function()
@@ -154,7 +160,7 @@ return {
         template = "Atlas/Extra/Template/99 Daily note template.md",
       },
       disable_frontmatter = true,
-      completion = { nvim_cmp = true },
+      completion = { nvim_cmp = true, min_chars = 2 },
       follow_url_func = function(url)
         vim.fn.jobstart({ "open", url })
       end,

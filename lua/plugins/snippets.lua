@@ -78,6 +78,80 @@ return {
           { name = "path" },
         }),
       })
+
+      -- Patch cmp-pandoc-references: replace get_entries to handle paths with spaces
+      -- and fall back to global bib when frontmatter has no bibliography field.
+      -- The plugin's locate_bib regex breaks on paths containing spaces.
+      local refs = require("cmp-pandoc-references.references")
+      local global_bib = "/Users/yangshaojun/Desktop/Workspace/100 Area/110 Academic/111 Literature/zotero.bib"
+
+      local function clean(text)
+        if not text then return nil end
+        return text:gsub("\n", " "):gsub("%s%s+", " ")
+      end
+
+      -- Cache parsed bib entries per file; re-parse only when mtime changes
+      local bib_cache = {}
+
+      local function parse_bib(filename, fields)
+        local stat = vim.uv.fs_stat(filename)
+        local mtime = stat and stat.mtime.sec
+        local cached = bib_cache[filename]
+        if cached and cached.mtime == mtime then return cached.entries end
+
+        local file = io.open(filename, "rb")
+        if not file then return {} end
+        local content = file:read("*all")
+        file:close()
+        local result = {}
+        for bibentry in content:gmatch("@.-\n}\n") do
+          if not bibentry:match("@[Cc]omment{") then
+            local key = bibentry:match("@%w+{(.-),")
+            if key then
+              local title  = clean(bibentry:match('title%s*=%s*["{]*(.-)["}],?')) or ""
+              local author = clean(bibentry:match('author%s*=%s*["{]*(.-)["}],?')) or ""
+              local year   = bibentry:match('year%s*=%s*["{]?(%d+)["}]?,?') or ""
+              table.insert(result, {
+                label = "@" .. key,
+                kind  = fields.entry_kind,
+                insertTextFormat = vim.lsp.protocol.InsertTextFormat.PlainText,
+                documentation = {
+                  kind  = fields.documentation_kind,
+                  value = "**" .. title .. "**\n\n*" .. author .. "*\n" .. year,
+                },
+              })
+            end
+          end
+        end
+        bib_cache[filename] = { mtime = mtime, entries = result }
+        return result
+      end
+
+      refs.get_entries = function(lines, fields)
+        local location = global_bib
+        for _, l in ipairs(lines) do
+          -- handles spaces in path; strips surrounding quotes
+          local loc = l:match("^bibliography%s*:%s*(.+)$")
+          if loc then
+            loc = loc:gsub('^["\']', ""):gsub('["\']%s*$', ""):gsub("%s+$", "")
+            if #loc > 0 then location = loc; break end
+          end
+        end
+        return parse_bib(location, fields)
+      end
+
+      -- Prose filetypes: drop buffer noise but keep obsidian wikilink sources
+      cmp.setup.filetype({ "markdown", "rmd", "quarto" }, {
+        sources = cmp.config.sources({
+          { name = "obsidian" },
+          { name = "obsidian_new" },
+          { name = "obsidian_tags" },
+          { name = "pandoc_references" },
+          { name = "nvim_lsp" },
+          { name = "luasnip", priority = 10 },
+          { name = "path" },
+        }),
+      })
     end,
   },
 }

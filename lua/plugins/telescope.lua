@@ -10,7 +10,10 @@ return {
       { "<leader>fg", "<cmd>Telescope live_grep<cr>",  desc = "Search text" },
       { "<leader>fb", "<cmd>Telescope buffers<cr>",    desc = "Buffers" },
       { "<leader>fr", "<cmd>Telescope oldfiles<cr>",   desc = "Recent files" },
-      { "<leader>fc", "<cmd>Telescope bibtex<cr>",     desc = "Cite reference" },
+      { "<leader>fc", "<cmd>Telescope bibtex<cr>",     desc = "Cite reference (parenthetical)" },
+      { "<leader>fC", function()
+          require("telescope").extensions.bibtex.bibtex({ format = "@%s" })
+        end, desc = "Cite reference (narrative)" },
     },
     config = function()
       require("telescope").setup({
