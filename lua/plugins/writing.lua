@@ -29,6 +29,22 @@ vim.api.nvim_create_autocmd("BufWritePre", {
   end,
 })
 
+-- Markdown folds (treesitter-based, heading-level navigation)
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "markdown", "rmd", "quarto" },
+  callback = function()
+    vim.opt_local.foldmethod = "expr"
+    vim.opt_local.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+    vim.opt_local.foldlevel = 99       -- all folds open on load
+    -- z2 / z3: show down to heading level 2 or 3 (number = depth)
+    -- zR / zM already handle unfold-all / fold-all natively
+    vim.keymap.set("n", "z2", function() vim.opt_local.foldlevel = 1 end,
+      { buffer = true, desc = "Fold to h2" })
+    vim.keymap.set("n", "z3", function() vim.opt_local.foldlevel = 2 end,
+      { buffer = true, desc = "Fold to h3" })
+  end,
+})
+
 -- Markdown-specific keymaps
 vim.api.nvim_create_autocmd("FileType", {
   pattern = { "markdown", "rmd", "quarto" },

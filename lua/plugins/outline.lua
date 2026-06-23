@@ -8,9 +8,16 @@ return {
       { "<leader>]", "<cmd>AerialNext<cr>", desc = "Next symbol" },
     },
     opts = {
-      backends = { "lsp", "treesitter" },
+      backends = {
+        ["_"]        = { "lsp", "treesitter" },
+        ["markdown"] = { "markdown" },
+      },
       layout = {
         default_direction = "float",
+      },
+      float = {
+        max_width = 0.5,
+        min_width = 0.4,
       },
       close_on_select = true,
       keymaps = {
@@ -19,7 +26,10 @@ return {
           require("aerial").close()
         end,
       },
-      filter_kind = { "Function", "Class", "Method", "Variable" },
+      filter_kind = {
+        ["_"]        = { "Function", "Class", "Method", "Variable" },
+        ["markdown"] = { "Interface" },
+      },
       show_guides = true,
     },
   },
