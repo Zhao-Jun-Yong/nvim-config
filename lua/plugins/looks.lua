@@ -116,6 +116,19 @@ return {
     end,
   },
 
+  -- Smear cursor animation
+  {
+    "sphamba/smear-cursor.nvim",
+    event = "VeryLazy",
+    opts = {
+      stiffness = 0.8,
+      trailing_stiffness = 0.5,
+      distance_stop_animating = 0.5,
+      color_levels = 4,
+      -- legacy_computing_symbols_support = true, -- enable if smear renders as '?' or garbage
+    },
+  },
+
   -- Startup dashboard
   {
     "nvimdev/dashboard-nvim",
