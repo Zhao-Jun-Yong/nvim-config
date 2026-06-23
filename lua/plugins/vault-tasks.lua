@@ -1,5 +1,74 @@
--- Vault task picker (<leader>ot) + date-insertion keymaps (<leader>td / <leader>ts / <leader>ta)
+-- Vault task picker (<leader>ot) + project board (<leader>op)
+-- + date-insertion keymaps (<leader>td / <leader>ts / <leader>ta)
 -- + task toggle (<leader>tc): [ ] → [x] ✅ date, [x] → [ ] strips ✅ date
+
+local STATUS_ICON = { active = "󰐊", recurring = "󰑖", ["on-hold"] = "󰏤", ["to-start"] = "󰄱", done = "󰗠" }
+local STATUS_ORDER = { active = 0, recurring = 1, ["to-start"] = 2, ["on-hold"] = 3, done = 4 }
+
+local function open_project_picker()
+  local pickers      = require("telescope.pickers")
+  local finders      = require("telescope.finders")
+  local conf         = require("telescope.config").values
+  local actions      = require("telescope.actions")
+  local action_state = require("telescope.actions.state")
+
+  local raw = vim.fn.systemlist("vault-projects 2>/dev/null")
+  if vim.v.shell_error ~= 0 and #raw == 0 then
+    vim.notify("vault-projects: not found or errored — is it in PATH?", vim.log.levels.ERROR)
+    return
+  end
+
+  local results = {}
+  for _, line in ipairs(raw) do
+    local parts = vim.split(line, "\t", { plain = true })
+    if #parts >= 4 then
+      local status   = parts[1]
+      local priority = parts[2]
+      local file     = parts[3]
+      local title    = parts[4]
+      local desc     = parts[5] or ""
+      local tags     = parts[6] or ""
+      local icon     = STATUS_ICON[status] or "·"
+      local stars    = (priority ~= "0" and priority ~= "") and ("★" .. priority .. " ") or "   "
+      table.insert(results, {
+        status   = status, priority = priority, file = file,
+        title = title, desc = desc, tags = tags,
+        display = string.format("%s %-10s %s%-28s %s", icon, status, stars, title, desc),
+        ordinal = status .. " " .. priority .. " " .. title .. " " .. desc .. " " .. tags,
+      })
+    end
+  end
+
+  table.sort(results, function(a, b)
+    local oa = STATUS_ORDER[a.status] or 9
+    local ob = STATUS_ORDER[b.status] or 9
+    if oa ~= ob then return oa < ob end
+    return (tonumber(b.priority) or 0) > (tonumber(a.priority) or 0)
+  end)
+
+  local active = 0
+  for _, r in ipairs(results) do if r.status == "active" or r.status == "recurring" then active = active + 1 end end
+
+  pickers.new({}, {
+    prompt_title = string.format("Projects  ● %d active  · %d total", active, #results),
+    finder = finders.new_table({
+      results = results,
+      entry_maker = function(e)
+        return { value = e, display = e.display, ordinal = e.ordinal, filename = e.file, lnum = 1 }
+      end,
+    }),
+    sorter    = conf.generic_sorter({}),
+    previewer = conf.grep_previewer({}),
+    attach_mappings = function(prompt_bufnr, _)
+      actions.select_default:replace(function()
+        actions.close(prompt_bufnr)
+        local sel = action_state.get_selected_entry()
+        if sel then vim.cmd({ cmd = "edit", args = { sel.filename } }) end
+      end)
+      return true
+    end,
+  }):find()
+end
 
 local function open_task_picker()
   local pickers     = require("telescope.pickers")
@@ -131,7 +200,8 @@ return {
       })
     end,
     keys = {
-      { "<leader>ot", open_task_picker, desc = "Vault tasks" },
+      { "<leader>ot", open_task_picker,    desc = "Vault tasks" },
+      { "<leader>op", open_project_picker, desc = "Vault projects" },
     },
   },
 }
